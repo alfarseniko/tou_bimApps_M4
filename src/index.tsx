@@ -8,6 +8,7 @@ import { Sidebar } from "./react-components/Sidebar";
 import { ProjectsPage } from "./react-components/ProjectsPage";
 import { ProjectsManager } from "./class/ProjectsManager";
 import ProjectDetails from "./react-components/ProjectDetails";
+import UsersPage from "./react-components/UsersPage";
 
 /** ################################################### */
 /*--------------------REACT---------------------------- */
@@ -39,6 +40,7 @@ appRoot.render(
           path="/project/:id"
           element={<ProjectDetails projectsManager={projectsManager} />}
         />
+        <Router.Route path="/users" element={<UsersPage />} />
       </Router.Routes>
     </Router.BrowserRouter>
   </>

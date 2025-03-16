@@ -24,9 +24,9 @@ export function Sidebar() {
             <span className="material-icons-round">apartment</span>Projects
           </li>
         </Link>
-        <Link to="/project">
+        <Link to="/users">
           <li id="users-button">
-            <span className="material-icons-round">people</span>Project
+            <span className="material-icons-round">people</span>Users
           </li>
         </Link>
       </ul>
