@@ -2,6 +2,7 @@
 /*--------------------IMPORTS-------------------------- */
 /** ################################################### */
 import * as React from "react";
+import * as BUI from "@thatopen/ui";
 
 /** ################################################### */
 /*--------------------INTERFACE------------------------ */
@@ -14,6 +15,13 @@ interface Props {
 /*--------------------REACT FUNCTION------------------- */
 /** ################################################### */
 export default function SearchBox(props: Props) {
+  const searchInput = document.getElementById("search-input") as BUI.TextInput;
+  if (searchInput) {
+    searchInput.addEventListener("input", () => {
+      props.onChange(searchInput.value);
+    });
+  }
+
   /** ################################################### */
   /*--------------JSX RETURN VALUE----------------------- */
   /** ################################################### */
@@ -26,18 +34,10 @@ export default function SearchBox(props: Props) {
         width: "40%",
       }}
     >
-      <input
-        onChange={(e) => {
-          props.onChange(e.target.value);
-        }}
-        type="text"
-        placeholder="Search projects by name..."
-        style={{
-          width: "100%",
-          height: "40px",
-          backgroundColor: "var(--baackground-100)",
-        }}
-      />
+      <bim-text-input
+        placeholder="Search projects..."
+        id="search-input"
+      ></bim-text-input>
     </div>
   );
 }

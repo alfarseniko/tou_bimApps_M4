@@ -4,6 +4,7 @@
 import * as React from "react";
 import * as ReactDOM from "react-dom/client";
 import * as Router from "react-router-dom";
+import * as BUI from "@thatopen/ui";
 import { Sidebar } from "./react-components/Sidebar";
 import { ProjectsPage } from "./react-components/ProjectsPage";
 import { ProjectsManager } from "./class/ProjectsManager";
@@ -13,6 +14,21 @@ import UsersPage from "./react-components/UsersPage";
 /** ################################################### */
 /*--------------------REACT---------------------------- */
 /** ################################################### */
+
+// Global declaration of HTML Components
+declare global {
+  namespace JSX {
+    interface IntrinsicElements {
+      "bim-grid": any;
+      "bim-label": any;
+      "bim-button": any;
+      "bim-text-input": any;
+    }
+  }
+}
+
+// Initializing the BIM UI Manager
+BUI.Manager.init();
 
 //Initializing projectsManager for global use
 const projectsManager = new ProjectsManager();

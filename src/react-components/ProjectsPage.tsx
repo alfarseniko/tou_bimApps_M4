@@ -101,21 +101,27 @@ export function ProjectsPage(props: Props) {
     <div className="page" id="projects-page" style={{ display: "flex" }}>
       <ProjectForm projectsManager={props.projectsManager} id={""} />
       <header>
-        <h2>Projects</h2>
+        <bim-label>Projects</bim-label>
         <SearchBox onChange={onProjectSearch} />
         <div id="header-button-container">
           <div id="up-down-buttons">
-            <button onClick={onExport} id="export-button">
-              <img src="./assets/upload-icon.svg" alt="" />
-            </button>
-            <button onClick={onImport} id="import-button">
-              <img src="./assets/download-icon.svg" alt="" />
-            </button>
+            <bim-button
+              onClick={onExport}
+              icon="iconoir:import"
+              style={{ marginRight: "8px" }}
+            ></bim-button>
+            <bim-button
+              onClick={onImport}
+              icon="ph:export"
+              style={{ marginLeft: "8px" }}
+            ></bim-button>
           </div>
           <div>
-            <button onClick={onNewProjectClick} id="new-project-btn">
-              <span className="material-icons-round">add</span>New Project
-            </button>
+            <bim-button
+              onClick={onNewProjectClick}
+              label="New Project"
+              icon="fluent:add-20-regular"
+            ></bim-button>
           </div>
         </div>
       </header>

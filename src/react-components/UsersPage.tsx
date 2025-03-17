@@ -2,13 +2,6 @@ import * as React from "react";
 import * as BUI from "@thatopen/ui";
 
 // declaring UI components as global to avoid recognition error by TS
-declare global {
-  namespace JSX {
-    interface IntrinsicElements {
-      "bim-grid": any;
-    }
-  }
-}
 
 export default function UsersPage() {
   // Create user table
@@ -62,6 +55,45 @@ export default function UsersPage() {
     `;
   });
 
+  const sidebar = BUI.Component.create<BUI.Component>(() => {
+    const buttonStyles = { height: "50px" };
+
+    return BUI.html`
+      <div style="padding: 4px">
+        <bim-button
+        style=${BUI.styleMap(buttonStyles)}
+        icon='material-symbols:print-sharp'
+        @click=${() => {
+          console.log(userTable.value);
+        }}
+        >
+        </bim-button>
+        <bim-button
+        style=${BUI.styleMap(buttonStyles)}
+        icon='mdi:file'
+        @click=${() => {
+          const csvData = userTable.csv;
+          const blob = new Blob([csvData], { type: "text/csv" });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = "users.csv";
+          a.click();
+        }}
+        >
+        </bim-button>
+      </div>
+    `;
+  });
+
+  const footer = BUI.Component.create<BUI.Component>(() => {
+    return BUI.html`
+    <div style='display: flex; justify-content: center'>
+      <bim-label>Made with ❤️ by Crewnix</bim-label>
+    </div >
+    `;
+  });
+
   // a set of layouts passed to bim-grid
   const gridLayout: BUI.Layouts = {
     primary: {
@@ -73,26 +105,26 @@ export default function UsersPage() {
       `,
       elements: {
         header: (() => {
-          const header = document.createElement("div");
-          header.style.backgroundColor = "#641b1b66";
-          return header;
+          const searchBox = BUI.Component.create<BUI.TextInput>(() => {
+            return BUI.html`
+            <bim-text-input style='padding: 4px', placeholder='Type to search users'>
+          </bim-text-input>
+            `;
+          });
+
+          searchBox.addEventListener("input", () => {
+            userTable.queryString = searchBox.value;
+          });
+          return searchBox;
         })(),
-        sidebar: (() => {
-          const sidebar = document.createElement("div");
-          sidebar.style.backgroundColor = "#1b641b66";
-          return sidebar;
-        })(),
+        sidebar,
         content,
-        footer: (() => {
-          const footer = document.createElement("div");
-          footer.style.backgroundColor = "#ff440066";
-          return footer;
-        })(),
+        footer,
       },
     },
   };
 
-  // Initialize BIM components
+  // Initialize BIM components after mounting
   React.useEffect(() => {
     BUI.Manager.init();
     const grid = document.getElementById("bimGrid") as BUI.Grid;
