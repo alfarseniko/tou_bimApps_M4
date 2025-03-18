@@ -3,6 +3,7 @@
 /** ################################################### */
 import * as React from "react";
 import * as Firestore from "firebase/firestore";
+import * as BUI from "@thatopen/ui";
 import { getCollection } from "../firebase/index";
 import { Link } from "react-router-dom";
 import { ErrorPopup } from "../class/ErrorPopup";
@@ -94,6 +95,46 @@ export function ProjectsPage(props: Props) {
     setProjects(props.projectsManager.filterProjects(value));
   };
 
+  useEffect(() => {
+    const updownButtonContainer = document.getElementById("up-down-buttons");
+    const newProjectButtonContainer =
+      document.getElementById("new-project-button");
+
+    updownButtonContainer?.appendChild(exportButton);
+    updownButtonContainer?.appendChild(importButton);
+    newProjectButtonContainer?.appendChild(newProjectButton);
+  }, []);
+
+  const exportButton = BUI.Component.create(() => {
+    return BUI.html`
+            <bim-button
+              @click=${onExport}
+              icon="ph:export"
+              style='margin-right: 8px' 
+            ></bim-button>
+    `;
+  });
+  const importButton = BUI.Component.create<BUI.Button>(() => {
+    return BUI.html`
+            <bim-button
+              @click=${onImport}
+              icon="iconoir:import"
+              style='margin-left: 8px' 
+            ></bim-button>
+          </div>
+    `;
+  });
+
+  const newProjectButton = BUI.Component.create<BUI.Button>(() => {
+    return BUI.html`
+            <bim-button
+              @click=${onNewProjectClick}
+              label="New Project"
+              icon="fluent:add-20-regular"
+            ></bim-button>
+    `;
+  });
+
   /** ################################################### */
   /*--------------JSX RETURN VALUE----------------------- */
   /** ################################################### */
@@ -104,25 +145,8 @@ export function ProjectsPage(props: Props) {
         <bim-label>Projects</bim-label>
         <SearchBox onChange={onProjectSearch} />
         <div id="header-button-container">
-          <div id="up-down-buttons">
-            <bim-button
-              onClick={onExport}
-              icon="iconoir:import"
-              style={{ marginRight: "8px" }}
-            ></bim-button>
-            <bim-button
-              onClick={onImport}
-              icon="ph:export"
-              style={{ marginLeft: "8px" }}
-            ></bim-button>
-          </div>
-          <div>
-            <bim-button
-              onClick={onNewProjectClick}
-              label="New Project"
-              icon="fluent:add-20-regular"
-            ></bim-button>
-          </div>
+          <div id="up-down-buttons"></div>
+          <div id="new-project-button"></div>
         </div>
       </header>
       {projectCards.length > 0 ? (
@@ -137,11 +161,11 @@ export function ProjectsPage(props: Props) {
             textAlign: "center",
           }}
         >
-          <p>
+          <div>
             <p style={{ fontSize: "x-large" }}>Oops!</p>
             <br />
             <p style={{ fontSize: "large" }}>No projects were found.</p>
-          </p>
+          </div>
         </div>
       )}
     </div>
