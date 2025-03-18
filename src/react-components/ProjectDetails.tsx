@@ -9,13 +9,14 @@ import { useParams, useNavigate } from "react-router-dom";
 import Todo from "./Todo";
 import AddTodoForm from "./forms/AddTodoForm";
 import { Project } from "../class/Project";
-import ThreeViewer from "./ThreeViewer";
+import IFCViewer from "./IFCViewer";
 import { deleteProject, getCollection } from "../firebase";
 import { toggleModal } from "../class/HelperFunctions";
 import ProjectForm from "./forms/ProjectForm";
 import ProjectTasksList from "./ProjectTasksList";
 import * as Firestore from "firebase/firestore";
 import { db } from "../firebase";
+import * as BUI from "@thatopen/ui";
 
 /** ################################################### */
 /*--------------------INTERFACE------------------------ */
@@ -93,6 +94,24 @@ export default function ProjectDetails(props: Props) {
     setProjects(props.projectsManager.filterProjects(value));
   };
 
+  React.useEffect(() => {
+    const headerElement = document.getElementById("header");
+
+    headerElement?.appendChild(deleteButton);
+  }, []);
+
+  const deleteButton = BUI.Component.create<BUI.Button>(() => {
+    return BUI.html`
+        <bim-button
+          @click=${() => {
+            props.projectsManager.deleteProject(project.id);
+          }}
+          label='Delete Project'
+          style= "background: red; max-width: 125px"
+        >
+        </bim-button>
+    `;
+  });
   /** ################################################### */
   /*--------------JSX RETURN VALUE----------------------- */
   /** ################################################### */
@@ -102,25 +121,21 @@ export default function ProjectDetails(props: Props) {
         projectsManager={props.projectsManager}
         id={routeParams.id}
       />
-      <header>
+      <header id="header">
         <div>
-          <h2 details-page-info="name-heading">{project.name}</h2>
-          <p
-            details-page-info="description-heading"
-            style={{ color: "#969696" }}
+          <bim-label
+            style={{
+              fontSize: "large",
+              marginBottom: "4px",
+              fontWeight: "bold",
+            }}
           >
+            {project.name}
+          </bim-label>
+          <bim-label style={{ color: "#969696" }}>
             {project.description}
-          </p>
+          </bim-label>
         </div>
-        <button
-          onClick={() => {
-            props.projectsManager.deleteProject(project.id);
-          }}
-          type="button"
-          style={{ backgroundColor: "red" }}
-        >
-          Delete Project
-        </button>
       </header>
       <div className="main-page-content">
         <div style={{ display: "flex", flexDirection: "column", rowGap: 30 }}>
@@ -221,7 +236,7 @@ export default function ProjectDetails(props: Props) {
             projectsManager={props.projectsManager}
           />
         </div>
-        <ThreeViewer />
+        <IFCViewer />
       </div>
     </div>
   );

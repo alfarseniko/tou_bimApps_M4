@@ -23,6 +23,7 @@ declare global {
       "bim-label": any;
       "bim-button": any;
       "bim-text-input": any;
+      "bim-viewport": any;
     }
   }
 }
