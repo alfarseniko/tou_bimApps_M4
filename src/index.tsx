@@ -24,6 +24,10 @@ declare global {
       "bim-button": any;
       "bim-text-input": any;
       "bim-viewport": any;
+      "bim-toolbar": any;
+      "bim-panel": any;
+      "bim-panel-section": any;
+      "bim-checkbox": any;
     }
   }
 }
