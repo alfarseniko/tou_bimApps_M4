@@ -108,15 +108,21 @@ export default function IFCViewer() {
       if (!fragmentsModel) {
         return;
       }
+      // fragmentsManager -> list -> fragmentID -> fragmentInstance -> indexer
       const highlighter = components.get(OBCF.Highlighter);
       const selection = highlighter.selection.select;
       const indexer = components.get(OBC.IfcRelationsIndexer);
+      const fragmentsManager = components.get(OBC.FragmentsManager);
+
       for (const fragmentID in selection) {
+        const fragment = fragmentsManager.list.get(fragmentID);
+        const model = fragment?.group;
         const expressIDs = selection[fragmentID];
+        if (!model) continue;
         for (const id of expressIDs) {
           const psets = indexer.getEntitiesWithRelation(
-            fragmentsModel,
-            "IsDefinedBy",
+            model,
+            "ContainsElements",
             id
           );
           console.log(psets);
