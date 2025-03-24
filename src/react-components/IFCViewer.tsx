@@ -104,10 +104,7 @@ export default function IFCViewer() {
       hider.set(true);
     };
 
-    const onShowProperties = () => {
-      if (!fragmentsModel) {
-        return;
-      }
+    const onShowProperties = async () => {
       // fragmentsManager -> list -> fragmentID -> fragmentInstance -> indexer
       const highlighter = components.get(OBCF.Highlighter);
       const selection = highlighter.selection.select;
@@ -116,6 +113,7 @@ export default function IFCViewer() {
 
       for (const fragmentID in selection) {
         const fragment = fragmentsManager.list.get(fragmentID);
+        console.log(fragment);
         const model = fragment?.group;
         const expressIDs = selection[fragmentID];
         if (!model) continue;
@@ -125,7 +123,12 @@ export default function IFCViewer() {
             "ContainsElements",
             id
           );
-          console.log(psets);
+          if (psets) {
+            for (const expressID of psets) {
+              const prop = await model.getProperties(expressID);
+              console.log(prop);
+            }
+          }
         }
       }
     };
@@ -139,11 +142,84 @@ export default function IFCViewer() {
       `;
     });
 
+    const elementPropertyPanel = BUI.Component.create<BUI.Panel>(() => {
+      const [propsTable, updatePropsTable] = CUI.tables.elementProperties({
+        components,
+        fragmentIdMap: {},
+      });
+
+      const highlighter = components.get(OBCF.Highlighter);
+      highlighter.events.select.onHighlight.add((fragmentIdMap) => {
+        if (!floatingGrid) return;
+        floatingGrid.layout = "secondary";
+        updatePropsTable({ fragmentIdMap });
+        propsTable.expanded = false;
+      });
+      highlighter.events.select.onClear.add((fragmentIdMap) => {
+        updatePropsTable({ fragmentIdMap: {} });
+        if (!floatingGrid) return;
+        floatingGrid.layout = "main";
+      });
+
+      const search = (e: Event) => {
+        const input = e.target as BUI.TextInput;
+        propsTable.queryString = input.value;
+      };
+
+      return BUI.html`
+      <bim-panel>
+        <bim-panel-section
+        name = 'property'
+        label= 'Property Information'
+        icon = 'solar:document-bold'
+        fixed>
+        <bim-text-input placeholder="Search..." @input=${search}></bim-text-input>
+        ${propsTable}
+        </bim-panel-section>
+      </bim-panel>
+
+      `;
+    });
+
+    const onWorldUpdate = () => {
+      if (!floatingGrid) return;
+      floatingGrid.layout = "world";
+    };
+
+    const worldPanel = BUI.Component.create<BUI.Panel>(() => {
+      const [worldTable] = CUI.tables.worldsConfiguration({ components });
+      const search = (e: Event) => {
+        const input = e.target as BUI.TextInput;
+        worldTable.queryString = input.value;
+      };
+
+      return BUI.html`
+      <bim-panel>
+        <bim-panel-section
+        name = 'world'
+        label= 'World Information'
+        icon = 'solar:document-bold'
+        fixed>
+        <bim-text-input placeholder="Search..." @input=${search}></bim-text-input>
+        ${worldTable}
+        </bim-panel-section>
+      </bim-panel>
+
+      `;
+    });
+
     const toolbar = BUI.Component.create<BUI.Toolbar>(() => {
       const [loadIfcBtn] = CUI.buttons.loadIfc({ components: components });
 
       return BUI.html`
         <bim-toolbar style="justify-self: center">
+          <bim-toolbar-section label="App">
+            <bim-button
+            label="World"
+            icon="tabler:brush"
+            @click=${onWorldUpdate}>
+            </bim-button>
+          </bim-toolbar-section>
           <bim-toolbar-section label="Import">
             ${loadIfcBtn}
           </bim-toolbar-section>
@@ -179,6 +255,22 @@ export default function IFCViewer() {
             /1fr
         `,
         elements: { toolbar },
+      },
+      secondary: {
+        template: `
+            "empty elementPropertyPanel" 1fr
+            "toolbar toolbar" auto
+            /1fr 20rem
+        `,
+        elements: { toolbar, elementPropertyPanel },
+      },
+      world: {
+        template: `
+            "empty worldPanel" 1fr
+            "toolbar toolbar" auto
+            /1fr 20rem
+        `,
+        elements: { toolbar, worldPanel },
       },
     };
 
