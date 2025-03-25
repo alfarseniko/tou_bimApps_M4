@@ -12,6 +12,8 @@ import * as FG from "@thatopen/fragments";
 export default function IFCViewer() {
   const components = new OBC.Components();
   let fragmentsModel: FG.FragmentsGroup | undefined;
+  const [classificationTree, updateClassificationTree] =
+    CUI.tables.classificationTree({ components, classifications: [] }, true);
 
   function setViewer() {
     const worlds = components.get(OBC.Worlds);
@@ -47,11 +49,71 @@ export default function IFCViewer() {
     fragmentsManager.onFragmentsLoaded.add(async (model) => {
       world.scene.three.add(model);
 
-      fragmentsModel = model;
-
       const indexer = components.get(OBC.IfcRelationsIndexer);
       await indexer.process(model);
+
+      const classifier = components.get(OBC.Classifier);
+
+      if (model.hasProperties) {
+        await classifier.byPredefinedType(model);
+        await classifier.bySpatialStructure(model);
+
+        console.log(classifier.list);
+
+        const classifications = [
+          {
+            system: "predefinedTypes",
+            label: "Predefined Types",
+          },
+          {
+            system: "spatialStructures",
+            label: "Spatial Containers",
+          },
+        ];
+
+        if (updateClassificationTree) {
+          updateClassificationTree({ classifications });
+          console.log(classificationTree);
+        }
+      }
+
+      fragmentsModel = model;
     });
+
+    const onFragmentExport = () => {
+      if (!fragmentsModel) return;
+      const fragmentBinary = fragmentsManager.export(fragmentsModel);
+      const blob = new Blob([fragmentBinary]);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${fragmentsModel.name}.frag`;
+      a.click();
+      URL.revokeObjectURL(url);
+    };
+
+    const onFragmentImport = () => {
+      const input = document.createElement("input");
+      input.type = "file";
+      input.accept = ".frag";
+      const reader = new FileReader();
+      reader.addEventListener("load", () => {
+        const binary = reader.result;
+        if (!(binary instanceof ArrayBuffer)) {
+          return;
+        }
+        const fragmentBinary = new Uint8Array(binary);
+        fragmentsManager.load(fragmentBinary);
+      });
+      input.addEventListener("change", () => {
+        const filesList = input.files;
+        if (!filesList) {
+          return;
+        }
+        reader.readAsArrayBuffer(filesList[0]);
+      });
+      input.click();
+    };
 
     const highlighter = components.get(OBCF.Highlighter);
     highlighter.setup({ world });
@@ -113,7 +175,6 @@ export default function IFCViewer() {
 
       for (const fragmentID in selection) {
         const fragment = fragmentsManager.list.get(fragmentID);
-        console.log(fragment);
         const model = fragment?.group;
         const expressIDs = selection[fragmentID];
         if (!model) continue;
@@ -155,7 +216,7 @@ export default function IFCViewer() {
         updatePropsTable({ fragmentIdMap });
         propsTable.expanded = false;
       });
-      highlighter.events.select.onClear.add((fragmentIdMap) => {
+      highlighter.events.select.onClear.add(() => {
         updatePropsTable({ fragmentIdMap: {} });
         if (!floatingGrid) return;
         floatingGrid.layout = "main";
@@ -181,9 +242,38 @@ export default function IFCViewer() {
       `;
     });
 
+    const onClassifier = () => {
+      if (!floatingGrid) return;
+      if (floatingGrid.layout !== "classifier") {
+        floatingGrid.layout = "classifier";
+      } else {
+        floatingGrid.layout = "main";
+      }
+    };
+
+    const classifierPanel = BUI.Component.create<BUI.Panel>(() => {
+      return BUI.html`
+      <bim-panel>
+        <bim-panel-section
+        name='classifier'
+        label='Classifier'
+        icon='solar:document-bold'
+        fixed
+        >
+          <bim-lable>Classification</bim-label>
+          ${classificationTree}
+        </bim-panel-section>
+      </bim-panel>
+      `;
+    });
+
     const onWorldUpdate = () => {
       if (!floatingGrid) return;
-      floatingGrid.layout = "world";
+      if (floatingGrid.layout !== "world") {
+        floatingGrid.layout = "world";
+      } else {
+        floatingGrid.layout = "main";
+      }
     };
 
     const worldPanel = BUI.Component.create<BUI.Panel>(() => {
@@ -208,20 +298,70 @@ export default function IFCViewer() {
       `;
     });
 
+    const onSpatialUpdate = () => {
+      if (floatingGrid.layout != "spatial") {
+        floatingGrid.layout = "spatial";
+      } else {
+        floatingGrid.layout = "main";
+      }
+    };
+    const spatialPanel = BUI.Component.create<BUI.Panel>(() => {
+      const [relationsTree] = CUI.tables.relationsTree({
+        components,
+        models: [],
+      }); // 2nd attr 'false' if no auto-update
+      relationsTree.preserveStructureOnFilter = true;
+      const search = (e: Event) => {
+        const input = e.target as BUI.TextInput;
+        relationsTree.queryString = input.value;
+      };
+
+      return BUI.html`
+      <bim-panel>
+        <bim-panel-section
+        name = 'spatial'
+        label= 'Spatial Information'
+        icon = 'solar:document-bold'
+        fixed>
+        <bim-text-input placeholder="Search..." @input=${search}></bim-text-input>
+        ${relationsTree}
+        </bim-panel-section>
+      </bim-panel>
+
+      `;
+    });
+
     const toolbar = BUI.Component.create<BUI.Toolbar>(() => {
       const [loadIfcBtn] = CUI.buttons.loadIfc({ components: components });
 
       return BUI.html`
         <bim-toolbar style="justify-self: center">
+          <bim-toolbar-section label="Import">
+            ${loadIfcBtn}
+          </bim-toolbar-section>
+          <bim-toolbar-section label="Fragments">
+            <bim-button
+            label="Export"
+            icon="mdi:cube"
+            @click=${onFragmentExport}>
+            </bim-button>
+            <bim-button
+            label="Import"
+            icon="tabler:package-export"
+            @click=${onFragmentImport}>
+            </bim-button>
+          </bim-toolbar-section>
           <bim-toolbar-section label="App">
             <bim-button
             label="World"
             icon="tabler:brush"
             @click=${onWorldUpdate}>
             </bim-button>
-          </bim-toolbar-section>
-          <bim-toolbar-section label="Import">
-            ${loadIfcBtn}
+            <bim-button
+            label="Spatial Data"
+            icon="tabler:brush"
+            @click=${onSpatialUpdate}>
+            </bim-button>
           </bim-toolbar-section>
           <bim-toolbar-section collapsed label="Ambient Oclussion">
             <bim-checkbox label="AO enabled"
@@ -241,6 +381,10 @@ export default function IFCViewer() {
               
               <bim-toolbar-section collapsed label="Property">
                   <bim-button label="Show" icon="clarity:list-line" @click=${onShowProperties}>
+                  </bim-button>
+              </bim-toolbar-section>
+              <bim-toolbar-section collapsed label="Groups">
+                  <bim-button label="Classifier" icon="tabler:eye-filled" @click=${onClassifier}>
                   </bim-button>
               </bim-toolbar-section>
               </bim-toolbar>
@@ -271,6 +415,22 @@ export default function IFCViewer() {
             /1fr 20rem
         `,
         elements: { toolbar, worldPanel },
+      },
+      spatial: {
+        template: `
+            "empty spatialPanel" 1fr
+            "toolbar toolbar" auto
+            /1fr 20rem
+        `,
+        elements: { toolbar, spatialPanel },
+      },
+      classifier: {
+        template: `
+            "empty classifierPanel" 1fr
+            "toolbar toolbar" auto
+            /1fr 20rem
+        `,
+        elements: { toolbar, classifierPanel },
       },
     };
 
