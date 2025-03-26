@@ -8,6 +8,7 @@ import * as OBCF from "@thatopen/components-front";
 import * as BUI from "@thatopen/ui";
 import * as CUI from "@thatopen/ui-obc";
 import * as FG from "@thatopen/fragments";
+import { modelNormalMatrix } from "three/examples/jsm/nodes/Nodes.js";
 
 export default function IFCViewer() {
   const components = new OBC.Components();
@@ -49,12 +50,11 @@ export default function IFCViewer() {
     fragmentsManager.onFragmentsLoaded.add(async (model) => {
       world.scene.three.add(model);
 
-      const indexer = components.get(OBC.IfcRelationsIndexer);
-      await indexer.process(model);
-
-      const classifier = components.get(OBC.Classifier);
-
       if (model.hasProperties) {
+        const indexer = components.get(OBC.IfcRelationsIndexer);
+        await indexer.process(model);
+
+        const classifier = components.get(OBC.Classifier);
         await classifier.byPredefinedType(model);
         await classifier.bySpatialStructure(model);
 
@@ -111,6 +111,45 @@ export default function IFCViewer() {
           return;
         }
         reader.readAsArrayBuffer(filesList[0]);
+      });
+      input.click();
+    };
+    const onPropertiesExport = () => {
+      if (!fragmentsModel) return;
+      const properties = JSON.stringify(
+        fragmentsModel.getLocalProperties(),
+        null,
+        2
+      );
+      const blob = new Blob([properties], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${fragmentsModel.name}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    };
+
+    const onPropertiesImport = () => {
+      const input = document.createElement("input");
+      input.type = "file";
+      input.accept = ".json";
+      const reader = new FileReader();
+      reader.addEventListener("load", () => {
+        const json = reader.result;
+        if (!json) {
+          return;
+        }
+        const properties = JSON.parse(json as string) as FG.IfcProperties;
+
+        fragmentsModel?.setLocalProperties(properties);
+      });
+      input.addEventListener("change", () => {
+        const filesList = input.files;
+        if (!filesList) {
+          return;
+        }
+        reader.readAsText(filesList[0]);
       });
       input.click();
     };
@@ -351,6 +390,18 @@ export default function IFCViewer() {
             @click=${onFragmentImport}>
             </bim-button>
           </bim-toolbar-section>
+          <bim-toolbar-section label="Model Properties">
+            <bim-button
+            label="Export"
+            icon="mdi:cube"
+            @click=${onPropertiesExport}>
+            </bim-button>
+            <bim-button
+            label="Import"
+            icon="tabler:package-export"
+            @click=${onPropertiesImport}>
+            </bim-button>
+          </bim-toolbar-section>
           <bim-toolbar-section label="App">
             <bim-button
             label="World"
@@ -362,13 +413,6 @@ export default function IFCViewer() {
             icon="tabler:brush"
             @click=${onSpatialUpdate}>
             </bim-button>
-          </bim-toolbar-section>
-          <bim-toolbar-section collapsed label="Ambient Oclussion">
-            <bim-checkbox label="AO enabled"
-              @change=${({ target }: { target: BUI.Checkbox }) => {
-                postproduction.setPasses({ ao: target.value });
-              }}>
-            </bim-checkbox> 
           </bim-toolbar-section>
           <bim-toolbar-section label="Selection">
             <bim-button label="Visibility" icon="material-symbols:visibility-outline" @click=${onToggleVisibility}>
