@@ -46,42 +46,80 @@ export default function IFCViewer() {
     const ifcLoader = components.get(OBC.IfcLoader);
     ifcLoader.setup();
 
+    const cullers = components.get(OBC.Cullers);
+    const culler = cullers.create(world);
+
     const fragmentsManager = components.get(OBC.FragmentsManager);
     fragmentsManager.onFragmentsLoaded.add(async (model) => {
       world.scene.three.add(model);
 
       if (model.hasProperties) {
-        const indexer = components.get(OBC.IfcRelationsIndexer);
-        await indexer.process(model);
-
-        const classifier = components.get(OBC.Classifier);
-        await classifier.byPredefinedType(model);
-        await classifier.bySpatialStructure(model);
-
-        console.log(classifier.list);
-
-        const classifications = [
-          {
-            system: "predefinedTypes",
-            label: "Predefined Types",
-          },
-          {
-            system: "spatialStructures",
-            label: "Spatial Containers",
-          },
-        ];
-
-        if (updateClassificationTree) {
-          updateClassificationTree({ classifications });
-          console.log(classificationTree);
-        }
+        processModel(model);
       }
+
+      for (const frag of model.items) {
+        culler.add(frag.mesh);
+      }
+      culler.needsUpdate = true;
 
       fragmentsModel = model;
     });
 
+    world.camera.controls.addEventListener("controlend", () => {
+      culler.needsUpdate = true;
+    });
+
+    const processModel = async (model) => {
+      const indexer = components.get(OBC.IfcRelationsIndexer);
+      await indexer.process(model);
+
+      const classifier = components.get(OBC.Classifier);
+      await classifier.byPredefinedType(model);
+      await classifier.bySpatialStructure(model);
+
+      console.log(classifier.list);
+
+      const classifications = [
+        {
+          system: "predefinedTypes",
+          label: "Predefined Types",
+        },
+        {
+          system: "spatialStructures",
+          label: "Spatial Containers",
+        },
+      ];
+
+      if (updateClassificationTree) {
+        updateClassificationTree({ classifications });
+        console.log(classificationTree);
+      }
+    };
+    const highlighter = components.get(OBCF.Highlighter);
+    highlighter.setup({ world });
+    highlighter.zoomToSelection = true;
+
+    viewerContainer.addEventListener("resize", () => {
+      rendererComponent.resize();
+      cameraComponent.updateAspect();
+    });
+
+    const { postproduction } = world.renderer;
+    postproduction.enabled = true;
+  }
+
+  function setUI() {
+    const onFragmentDispose = () => {
+      const fragmentsManager = components.get(OBC.FragmentsManager);
+      for (const [, group] of fragmentsManager.groups) {
+        fragmentsManager.disposeGroup(group);
+      }
+      fragmentsModel = undefined;
+    };
+
     const onFragmentExport = () => {
       if (!fragmentsModel) return;
+      const fragmentsManager = components.get(OBC.FragmentsManager);
       const fragmentBinary = fragmentsManager.export(fragmentsModel);
       const blob = new Blob([fragmentBinary]);
       const url = URL.createObjectURL(blob);
@@ -103,6 +141,7 @@ export default function IFCViewer() {
           return;
         }
         const fragmentBinary = new Uint8Array(binary);
+        const fragmentsManager = components.get(OBC.FragmentsManager);
         fragmentsManager.load(fragmentBinary);
       });
       input.addEventListener("change", () => {
@@ -153,18 +192,6 @@ export default function IFCViewer() {
       });
       input.click();
     };
-
-    const highlighter = components.get(OBCF.Highlighter);
-    highlighter.setup({ world });
-    highlighter.zoomToSelection = true;
-
-    viewerContainer.addEventListener("resize", () => {
-      rendererComponent.resize();
-      cameraComponent.updateAspect();
-    });
-
-    const { postproduction } = world.renderer;
-    postproduction.enabled = true;
 
     const onToggleVisibility = () => {
       // highlighter component
@@ -372,6 +399,8 @@ export default function IFCViewer() {
 
     const toolbar = BUI.Component.create<BUI.Toolbar>(() => {
       const [loadIfcBtn] = CUI.buttons.loadIfc({ components: components });
+      loadIfcBtn.tooltipTitle = "Load IFC";
+      loadIfcBtn.label = "";
 
       return BUI.html`
         <bim-toolbar style="justify-self: center">
@@ -380,55 +409,60 @@ export default function IFCViewer() {
           </bim-toolbar-section>
           <bim-toolbar-section label="Fragments">
             <bim-button
-            label="Export"
+            tooltip="Export"
             icon="mdi:cube"
             @click=${onFragmentExport}>
             </bim-button>
             <bim-button
-            label="Import"
+            tooltip="Import"
             icon="tabler:package-export"
             @click=${onFragmentImport}>
+            </bim-button>
+            <bim-button
+            tooltip="Dispose"
+            icon="tabler:trash"
+            @click=${onFragmentDispose}>
             </bim-button>
           </bim-toolbar-section>
           <bim-toolbar-section label="Model Properties">
             <bim-button
-            label="Export"
+            tooltip="Export"
             icon="mdi:cube"
             @click=${onPropertiesExport}>
             </bim-button>
             <bim-button
-            label="Import"
+            tooltip="Import"
             icon="tabler:package-export"
             @click=${onPropertiesImport}>
             </bim-button>
           </bim-toolbar-section>
           <bim-toolbar-section label="App">
             <bim-button
-            label="World"
+            tooltip="World"
             icon="tabler:brush"
             @click=${onWorldUpdate}>
             </bim-button>
             <bim-button
-            label="Spatial Data"
+            tooltip="Spatial Data"
             icon="tabler:brush"
             @click=${onSpatialUpdate}>
             </bim-button>
           </bim-toolbar-section>
           <bim-toolbar-section label="Selection">
-            <bim-button label="Visibility" icon="material-symbols:visibility-outline" @click=${onToggleVisibility}>
+            <bim-button tooltip="Visibility" icon="material-symbols:visibility-outline" @click=${onToggleVisibility}>
               </bim-button>
-              <bim-button label="Isolate" icon="mdi:filter" @click=${onIsolate}>
+              <bim-button tooltip="Isolate" icon="mdi:filter" @click=${onIsolate}>
                 </bim-button>
-                <bim-button label="Show All" icon="tabler:eye-filled" @click=${onShowAll}>
+                <bim-button tooltip="Show All" icon="tabler:eye-filled" @click=${onShowAll}>
                   </bim-button>
                 </bim-toolbar-section>
               
               <bim-toolbar-section collapsed label="Property">
-                  <bim-button label="Show" icon="clarity:list-line" @click=${onShowProperties}>
+                  <bim-button tooltip="Show" icon="clarity:list-line" @click=${onShowProperties}>
                   </bim-button>
               </bim-toolbar-section>
               <bim-toolbar-section collapsed label="Groups">
-                  <bim-button label="Classifier" icon="tabler:eye-filled" @click=${onClassifier}>
+                  <bim-button tooltip="Classifier" icon="tabler:eye-filled" @click=${onClassifier}>
                   </bim-button>
               </bim-toolbar-section>
               </bim-toolbar>
@@ -479,15 +513,17 @@ export default function IFCViewer() {
     };
 
     floatingGrid.layout = "main";
-
+    const viewerContainer = document.getElementById(
+      "viewer-container"
+    ) as HTMLElement;
     viewerContainer.appendChild(floatingGrid);
   }
 
-  function renderScene() {}
-
   React.useEffect(() => {
-    setViewer();
-    // setupUI();
+    setTimeout(() => {
+      setViewer();
+      setUI();
+    });
 
     return () => {
       components.dispose();
